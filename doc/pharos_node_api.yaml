@@ -1,0 +1,474 @@
+swagger: '2.0'
+info:
+  title: Pharos Node
+  description: >-
+    This is a description of Pharos Node API which is called by Pharos Anchor.  
+
+    Pharos Node interacts with Pharos Anchor and enables
+    distribution and control of microservices on an app-by-app basis.
+
+    In addition, It provides resource information API.
+    
+    
+    Pharos Node's base url should be changed depending on whether Pharos Node is behind a reverse proxy.
+    
+    
+    Case)
+    
+    1. Default Pharos Node's base url  - http://'IP':48098/api/v1/~
+    
+    2. Pharos Node's base url behind a reverse proxy - http://'IP':80/pharos-node/api/v1/~
+    
+  version: v1-20180110
+schemes:
+  - http
+tags:
+  - name: Deployment
+    description: Distribution & Control Apps
+  - name: Health
+    description: Registration & Health check of Pharos Node
+  - name: Resource Monitoring
+    description: Resource information collector
+  - name: Device Control
+    description: Control a device with Pharos Node. These are available when there is a system container which can control devices
+  - name: To Anchor
+    description: >-
+      These APIs will not be used by users. It is used by Node to send request
+      to Anchor. The description is provided for developers who need to know
+      about Pharos Node's behavior.
+  - name: Configuration
+    description: Properties and configurations of Pharos Node
+paths:
+  '/api/v1/monitoring/apps/{app_id}/resource':
+    get:
+      tags:
+        - Resource Monitoring
+      description: >-
+        Returns each service's resource usage in an app.
+      parameters:
+        - name: app_id
+          in: path
+          description: ID of the app assigned by Pharos
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful operation.
+          schema:
+            $ref: "#/definitions/response_of_app_resource"
+  '/api/v1/monitoring/resource':
+    get:
+      tags:
+        - Resource Monitoring
+      description: >-
+        Returns device information (cpu/memory/disk/network usage).
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successful operation.
+          schema:
+            $ref: '#/definitions/response_of_resource'
+  '/api/v1/management/nodes/register':
+    post:
+      tags:
+        - To Anchor
+      description: Request to register Pharos Node to Pharos Anchor.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: body
+          description: >-
+            Previously assigned node id. This is used to update node information
+            while keeping the id. 
+          required: false
+          schema:
+            $ref: '#/definitions/registration'
+      responses:
+        '200':
+          description: Node registration succeeds
+  '/api/v1/management/nodes/ping':
+    post:
+      tags:
+        - To Anchor
+      description: Send ping message to Pharos Anchor
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successful operation.
+  '/api/v1/management/nodes/unregister':
+    post:
+      tags:
+        - Health
+      description: Request to unregister Pharos Node from Pharos Anchor
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Node un-registration succeeds
+  '/api/v1/management/apps':
+    get:
+      tags:
+        - Deployment
+      description: Returns a list of deployed apps through Pharos
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/definitions/response_of_app_list'
+  '/api/v1/management/apps/deploy':
+    post:
+      tags:
+        - Deployment
+      description: 'Install an app with yaml file, which is passed to body'
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: docker-compose.yml
+          in: body
+          description: >-
+            Information of multi-container docker applications include several
+            images information and containers execute option.
+          required: true
+          schema:
+            $ref: '#/definitions/docker-compose'
+      responses:
+        '201':
+          description: docker service deployment succeeds
+          headers:
+            location:
+              description: >-
+                URI pointing to location of the newly deployed App, e.g.
+                http://192.168.0.10:5000/api/v1/management/apps/{app_id}
+              type: string
+          schema:
+            $ref: '#/definitions/response_of_deployment'
+  '/api/v1/management/apps/{app_id}':
+    get:
+      tags:
+        - Deployment
+      description: 'Returns information about the application specified by {app_id}'
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: app_id
+          in: path
+          description: ID of the app assigned by Pharos
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Application get succeeds
+          schema:
+            $ref: '#/definitions/response_of_get_app'
+    post:
+      tags:
+        - Deployment
+      description: Update YAML file of the specified app.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: app_id
+          in: path
+          description: ID of the app assigned by Pharos
+          required: true
+          type: string
+        - name: docker-compose.yml
+          in: body
+          description: >-
+            Information of multi-container docker applications include several
+            images information and containers execute option.
+          required: true
+          schema:
+            $ref: '#/definitions/docker-compose'
+      responses:
+        '200':
+          description: Application update succeeds
+    delete:
+      tags:
+        - Deployment
+      description: 'Delete the app with {app_id}'
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: app_id
+          in: path
+          description: ID of the app assigned by Pharos
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Application delete succeeds
+  '/api/v1/management/apps/{app_id}/update':
+    post:
+      tags:
+        - Deployment
+      description: >-
+        Reinstall the app with {app_id} again. The app update must be preceded
+        by POST '/api/v1/management/apps/{app_id}'.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: app_id
+          in: path
+          description: ID of the app assigned by Pharos
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Application update succeeds
+  '/api/v1/management/apps/{app_id}/start':
+    post:
+      tags:
+        - Deployment
+      description: |
+        Start the app specified by {app_id}
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: app_id
+          in: path
+          description: ID of the app assigned by Pharos
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Application start succeeds
+  '/api/v1/management/apps/{app_id}/stop':
+    post:
+      tags:
+        - Deployment
+      description: 'Stop the app specified by {app_id}'
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: app_id
+          in: path
+          description: ID of the app assigned by Pharos
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Application stop succeeds
+  '/api/v1/management/device/configuration':
+    get:
+      tags:
+        - Configuration
+      description: 'Returns device properties and configurations (deviceName, pinginterval, os, platform, processor)'
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Configuration get succeeds
+          schema:
+            $ref: '#/definitions/response_of_get_configuration'
+    post:
+      tags:
+        - Configuration
+      description: 'Update device configurations (deviceName, pinginterval)'
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: properties
+          in: body
+          description: >-
+            Configuration sets to be updated.
+          required: false
+          schema:
+            $ref: '#/definitions/configuration'
+      responses:
+        '200':
+          description: Configuration update succeeds
+  '/api/v1/management/device/reboot':
+    post:
+      tags:
+        - Device Control
+      description: Reboot a device
+      responses:
+        '200':
+          description: Successful operation.
+  '/api/v1/management/device/restore':
+    post:
+      tags:
+        - Device Control
+      description: Reset a device to initial state
+      responses:
+        '200':
+          description: Successful operation.
+definitions:
+  cpu:
+    description: Information about cpu usage of edge device where Pharos Node exists
+    example: ["8.00%", "3.03%", "7.07%", "16.16%", "9.90%", "18.00%", "11.22%", "4.12%"]
+  mem:
+    description: Information about memory usage of edge device where Pharos Node exists
+    example: {"free":"0KB", "total":"0KB", "used":"0KB", "usedpercnet":"0%"}
+  disk:
+    description: Information about disk usage of edge device where Pharos Node exists
+    example: [{"free":"0G", "path":"/root", "total":"0G", "used":"0G", "usedpercent":"0%"}]
+  id:
+    description: id
+    example: asdjflkwjdfpaosdjfaposdf3423
+  service-name:
+    required:
+      - image
+    properties:
+      image:
+        type: string
+        example: 'alpine:3.5'
+  services:
+    required:
+      - service-name
+    properties:
+      service-name:
+        $ref: '#/definitions/service-name'
+  docker-compose:
+    required:
+      - version
+      - services
+    properties:
+      version:
+        type: string
+        example: 1
+      services:
+        $ref: '#/definitions/services'
+  address:
+    required:
+      - manager
+      - node
+    properties:
+      manager:
+        type: string
+        example: 192.168.0.1
+      node:
+        type: string
+        example: 192.168.0.2
+  health_check:
+    required:
+      - interval
+    properties:
+      interval:
+        type: string
+        description: Time unit is minutes
+        example: 5
+  registration:
+    required:
+      - ip
+      - healthCheck
+    properties:
+      ip:
+        $ref: '#/definitions/address'
+      healthCheck:
+        $ref: '#/definitions/health_check'
+  configuration:
+    required:
+      - properties
+    properties:
+      properties:
+        type: array
+        example:
+          - {"devicename":"EdgeDevice"}
+          - {"pinginterval":"10"}
+  response_of_app_resource:
+    required:
+      - services
+    properties:
+      services:
+        type: array
+        example:
+          - {"blockinput": "0.000B", "blockoutput": "0.000B", "cid": "abcd1234", "cname": "service1", "cpu": "0.000%",      "mem": "0.00%", "memlimit": "0.000B", "memusage": "0.000B", "networkinput": "0.000B", "networkoutput": "0.000B", "pids": 0}
+  response_of_deployment:
+    required:
+      - id
+    properties:
+      id:
+        $ref: '#/definitions/id'
+  response_of_get_app:
+    required:
+      - id
+      - state
+      - description
+      - images
+      - services
+    properties:
+      id:
+        $ref: '#/definitions/id'
+      state:
+        type: string
+        example: running
+      description:
+        $ref: '#/definitions/docker-compose'
+      images:
+        type: array
+        example:
+          - {"name":"docker image repository"}
+      services:
+        type: array
+        example:
+          - {"name":"container name", "cid":"container ID", "ports":[], "state":{"exitcode": "0","status": "running"}}
+  response_of_app_list:
+    required:
+      - apps
+    properties:
+      apps:
+        type: array
+        items:
+          $ref: '#/definitions/response_of_get_app'
+  response_of_resource:
+    required:
+      - cpu
+      - mem
+      - disk
+    properties:
+      cpu:
+        $ref: '#/definitions/cpu'
+      mem:
+        $ref: '#/definitions/mem'
+      disk:
+        $ref: '#/definitions/disk'
+  response_of_get_configuration:
+    required:
+      - properties
+    properties:
+      properties:
+        type: array
+        example:
+          - {"anchoraddress":"192.168.0.1", "readOnly":true}
+          - {"anchorendpoint":"http://192.168.0.1:80/pharos-anchor", "readOnly":true}
+          - {"reverseproxy":{"enabled":true}, "readOnly":true}
+          - {"nodeaddress":"192.168.0.1", "readOnly":true}
+          - {"devicename":"EdgeDevice", "readOnly":false}
+          - {"pinginterval":"10", "readOnly":false}
+          - {"os":"linux", "readOnly":true}
+          - {"platform":"Ubuntu 16.04.3 LTS", "readOnly":true}
+          - {"processor":[{"cpu":"0", "modelname":"Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz"}], "readOnly":true}
+          - {"deviceid":"00000000-0000-0000-0000-000000000000", "readOnly":true}
